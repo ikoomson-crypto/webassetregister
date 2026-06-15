@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asset Register Management System</title>
+    <link href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100vh;
+            width: 280px;
+            background: linear-gradient(180deg, #2c3e50 0%, #1a252f 100%);
+            color: white;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+
+        .sidebar.collapsed {
+            width: 80px;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-header h3 {
+            font-size: 1.2rem;
+            margin: 0;
+        }
+
+        .sidebar-header.collapsed h3 {
+            display: none;
+        }
+
+        .sidebar-menu {
+            padding: 20px 0;
+        }
+
+        .menu-item {
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            color: #ecf0f1;
+        }
+
+        .menu-item:hover {
+            background: rgba(255,255,255,0.1);
+            padding-left: 25px;
+        }
+
+        .menu-item.active {
+            background: #667eea;
+            border-left: 4px solid white;
+        }
+
+        .menu-icon {
+            width: 30px;
+            font-size: 1.2rem;
+        }
+
+        .menu-text {
+            margin-left: 10px;
+            font-size: 0.9rem;
+        }
+
+        /* Menu Group Styles */
+        .menu-group-header {
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            color: #ecf0f1;
+            background: rgba(255,255,255,0.05);
+            margin-top: 5px;
+        }
+
+        .menu-group-header:hover {
+            background: rgba(255,255,255,0.15);
+        }
+
+        .menu-group-header .menu-arrow {
+            margin-left: auto;
+            font-size: 0.8rem;
+            transition: transform 0.3s ease;
+        }
+
+        .menu-group-header .menu-arrow i {
+            transition: transform 0.3s ease;
+        }
+
+        .menu-group-items {
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            max-height: 300px;
+        }
+
+        .menu-group-items.collapsed {
+            max-height: 0;
+        }
+
+        .sub-menu {
+            padding-left: 50px !important;
+            background: rgba(0,0,0,0.2);
+        }
+
+        .sub-menu:hover {
+            padding-left: 55px !important;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .sub-menu .menu-text {
+            font-size: 0.85rem;
+        }
+
+        /* Sidebar collapsed state */
+        .sidebar.collapsed .menu-group-header .menu-text,
+        .sidebar.collapsed .menu-group-header .menu-arrow,
+        .sidebar.collapsed .menu-group-items {
+            display: none;
+        }
+
+        .sidebar.collapsed .menu-group-header {
+            justify-content: center;
+            padding: 12px 0;
+        }
+
+        .sidebar.collapsed .menu-group-header .menu-icon {
+            margin: 0;
+        }
+
+        .sidebar.collapsed .sub-menu {
+            display: none;
+        }
+
+        .sidebar.collapsed .menu-text {
+            display: none;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 280px;
+            transition: all 0.3s ease;
+            padding: 20px;
+        }
+
+        .main-content.expanded {
+            margin-left: 80px;
+        }
+
+        /* Toggle Button */
+        .toggle-sidebar {
+            position: fixed;
+            left: 290px;
+            top: 20px;
+            z-index: 1001;
+            background: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .toggle-sidebar.collapsed {
+            left: 90px;
+        }
+
+        .toggle-sidebar:hover {
+            transform: scale(1.1);
+        }
+
+        /* Container Main */
+        .container-main {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+            margin-top: 60px;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+
+        .btn-group-custom {
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .btn-group-custom .btn {
+            margin-right: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        table.dataTable {
+            font-size: 12px;
+        }
+
+        .modal-lg {
+            max-width: 90%;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .required:after {
+            content: " *";
+            color: red;
+        }
+
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stats-card h3 {
+            font-size: 2em;
+            margin: 0;
+        }
+
+        .stats-card p {
+            margin: 0;
+            opacity: 0.9;
+        }
+
+        .btn-action {
+            margin: 2px;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+        }
+
+        .status-badge {
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .status-active {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .status-disposed {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .currency-value {
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        .category-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%);
+            color: #667eea;
+            border: 1px solid #667eea40;
+        }
+
+        .category-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+
+        .category-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .category-name {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .category-count {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .bulk-actions-bar {
+            background: #e8eaf6;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .selected-count {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 80px;
+            }
+            .main-content {
+                margin-left: 80px;
+            }
+            .toggle-sidebar {
+                left: 90px;
+            }
+            .menu-text {
+                display: none;
+            }
+            .sidebar-header h3 {
+                display: none;
+            }
+            .menu-group-header .menu-text,
+            .menu-group-header .menu-arrow {
+                display: none;
+            }
+            .menu-group-header {
+                justify-content: center;
+                padding: 12px 0;
+            }
+            .menu-group-items {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Toggle Button -->
+    <button class="toggle-sidebar" onclick="toggleSidebar()">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Sidebar Navigation -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-boxes fa-2x"></i>
+            <h3>Asset Register</h3>
+        </div>
+        <div class="sidebar-menu">
+            <!-- Dashboard -->
+            <div class="menu-item" onclick="navigateTo('dashboard')">
+                <div class="menu-icon"><i class="fas fa-tachometer-alt"></i></div>
+                <div class="menu-text">Dashboard</div>
+            </div>
+
+            <!-- DATA ENTRY GROUP -->
+            <div class="menu-group-header" onclick="toggleMenuGroup('dataEntryGroup')">
+                <div class="menu-icon"><i class="fas fa-database"></i></div>
+                <div class="menu-text">Data Entry</div>
+                <div class="menu-arrow"><i class="fas fa-chevron-down"></i></div>
+            </div>
+            <div id="dataEntryGroup" class="menu-group-items">
+                <div class="menu-item sub-menu" onclick="navigateTo('assets')">
+                    <div class="menu-icon"><i class="fas fa-list"></i></div>
+                    <div class="menu-text">All Assets</div>
+                </div>
+                <div class="menu-item sub-menu" onclick="navigateTo('categories')">
+                    <div class="menu-icon"><i class="fas fa-tags"></i></div>
+                    <div class="menu-text">Categories</div>
+                </div>
+            </div>
+
+            <!-- REPORTS GROUP -->
+            <div class="menu-group-header" onclick="toggleMenuGroup('reportsGroup')">
+                <div class="menu-icon"><i class="fas fa-chart-line"></i></div>
+                <div class="menu-text">Reports</div>
+                <div class="menu-arrow"><i class="fas fa-chevron-down"></i></div>
+            </div>
+            <div id="reportsGroup" class="menu-group-items">
+                <div class="menu-item sub-menu" onclick="navigateTo('depreciation')">
+                    <div class="menu-icon"><i class="fas fa-calendar-alt"></i></div>
+                    <div class="menu-text">Depreciation Schedule</div>
+                </div>
+                
+                <div class="menu-item sub-menu" onclick="navigateTo('assetSchedule')">
+                    <div class="menu-icon"><i class="fas fa-exchange-alt"></i></div>
+                    <div class="menu-text">Asset Schedule</div>
+                </div>
+                
+            </div>
+
+            <hr style="margin: 20px; border-color: rgba(255,255,255,0.1);">
+
+            <div class="menu-item" onclick="navigateTo('help')">
+                <div class="menu-icon"><i class="fas fa-question-circle"></i></div>
+                <div class="menu-text">Help</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <!-- Dashboard View -->
+        <div id="dashboardView" style="display:none;">
+            <div class="container-main">
+                <h1 class="text-center">
+                    <i class="fas fa-tachometer-alt"></i> Asset Register Dashboard
+                </h1>
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="stats-card" onclick="navigateTo('assets')">
+                            <i class="fas fa-chart-line fa-2x"></i>
+                            <h3 id="totalAssets">0</h3>
+                            <p>Total Assets</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card" onclick="navigateTo('depreciation')">
+                            <i class="fas fa-coins fa-2x"></i>
+                            <h3 id="totalValue">$0</h3>
+                            <p>Total Value</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card" onclick="navigateTo('assets')">
+                            <i class="fas fa-check-circle fa-2x"></i>
+                            <h3 id="activeAssets">0</h3>
+                            <p>Active Assets</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card" onclick="navigateTo('assets')">
+                            <i class="fas fa-trash-alt fa-2x"></i>
+                            <h3 id="disposedAssets">0</h3>
+                            <p>Disposed Assets</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assets View -->
+        <div id="assetsView" style="display:none;">
+            <div class="container-main">
+                <h1 class="text-center">
+                    <i class="fas fa-list"></i> Asset Register Management System
+                </h1>
+
+                <div class="btn-group-custom d-flex flex-wrap">
+                    <button class="btn btn-primary" onclick="showAddModal()">
+                        <i class="fas fa-plus"></i> Add Asset
+                    </button>
+                    <button class="btn btn-success" onclick="exportExcel()">
+                        <i class="fas fa-file-excel"></i> Export to Excel
+                    </button>
+                    <button class="btn btn-info" onclick="downloadTemplate()">
+                        <i class="fas fa-download"></i> Download Template
+                    </button>
+                    <button class="btn btn-warning" onclick="importExcel()">
+                        <i class="fas fa-upload"></i> Import from Excel
+                    </button>
+                    <button class="btn btn-danger" id="bulkDeleteBtn" onclick="bulkDelete()" style="display:none;">
+                        <i class="fas fa-trash-alt"></i> Delete Selected
+                    </button>
+                    <button class="btn btn-secondary" onclick="refreshData()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+
+                <div id="bulkActionsBar" class="bulk-actions-bar">
+                    <div>
+                        <i class="fas fa-check-circle"></i>
+                        <span class="selected-count" id="selectedCount">0</span> asset(s) selected
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-success" onclick="selectAll()">
+                            <i class="fas fa-check-double"></i> Select All
+                        </button>
+                        <button class="btn btn-sm btn-secondary" onclick="deselectAll()">
+                            <i class="fas fa-times"></i> Deselect All
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="bulkDelete()">
+                            <i class="fas fa-trash-alt"></i> Delete Selected
+                        </button>
+                    </div>
+                </div>
+
+                <div class="search-box">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" id="searchInput" class="form-control" placeholder="Search by Asset No., Category, Description, User, or Entity...">
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table id="assetsTable" class="table table-striped table-bordered table-hover" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th style="width: 30px;"><input type="checkbox" id="selectAllCheckbox" onclick="toggleSelectAll()"></th>
+                                <th>ASSET NO.</th>
+                                <th>CATEGORY</th>
+                                <th>DESCRIPTION</th>
+                                <th>USER</th>
+                                <th>SERIAL NO.</th>
+                                <th>CONDITION</th>
+                                <th>Purchase Date</th>
+                                <th>Depreciation Start Date</th>
+                                <th>Useful life (Yrs)</th>
+                                <th>DISPOSAL Date</th>
+                                <th>Status</th>
+                                <th>INITIAL COST</th>
+                                <th>OTHER COST</th>
+                                <th>Total Cost</th>
+                                <th>Entity</th>
+                                <th>Currency</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                        <tfoot class="table-secondary">
+                            <tr>
+                                <th></th>
+                                <th colspan="12" style="text-align:right">Totals:</th>
+                                <th id="totalInitialCost">0.00</th>
+                                <th id="totalOtherCost">0.00</th>
+                                <th id="totalOverallCost">0.00</th>
+                                <th colspan="2"></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Categories View -->
+        <div id="categoriesView" style="display:none;">
+            <div class="container-main">
+                <h1 class="text-center">
+                    <i class="fas fa-tags"></i> Asset Category Management
+                </h1>
+                <p class="text-center text-muted">Create and manage asset categories. Categories appear in the dropdown when adding assets.</p>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <i class="fas fa-plus-circle"></i> Create New Category
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <input type="text" id="newCategoryName" class="form-control" placeholder="Enter category name (e.g., IT Equipment, Office Furniture, Vehicles)">
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-primary w-100" onclick="createCategory()">
+                                    <i class="fas fa-save"></i> Create Category
+                                </button>
+                            </div>
+                        </div>
+                        <small class="text-muted mt-2 d-block">
+                            <i class="fas fa-info-circle"></i> Categories created here will appear immediately in the dropdown when adding assets.
+                        </small>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <i class="fas fa-list"></i> Existing Categories
+                    </div>
+                    <div class="card-body">
+                        <div id="categoriesList">
+                            <div class="text-center text-muted">Loading categories...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mt-4">
+                    <div class="card-header bg-success text-white">
+                        <i class="fas fa-chart-pie"></i> Category Statistics
+                    </div>
+                    <div class="card-body">
+                        <div class="row" id="categoryStats">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Asset Modal -->
+    <div class="modal fade" id="assetModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">
+                        <i class="fas fa-plus-circle"></i> Add Asset
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="assetForm">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label required">ASSET NO.</label>
+                                <input type="text" class="form-control" id="asset_no" required>
+                                <small class="text-muted">Unique identifier for the asset</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label required">ASSET CATEGORY</label>
+                                <select class="form-control" id="asset_category" required>
+                                    <option value="">Select Category</option>
+                                </select>
+                                <small class="text-muted">Categories are managed in the Categories section</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label required">DESCRIPTION</label>
+                                <input type="text" class="form-control" id="description" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label required">USER</label>
+                                <input type="text" class="form-control" id="user" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">SERIAL NO.</label>
+                                <input type="text" class="form-control" id="serial_no">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label required">CONDITION</label>
+                                <select class="form-control" id="condition" required>
+                                    <option value="New">🆕 New</option>
+                                    <option value="Good">✅ Good</option>
+                                    <option value="Fair">⚠️ Fair</option>
+                                    <option value="Poor">📉 Poor</option>
+                                    <option value="Damaged">🔧 Damaged</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label required">Purchase Date</label>
+                                <input type="date" class="form-control" id="purchase_date" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label required">Depreciation Start Date</label>
+                                <input type="date" class="form-control" id="depreciation_start_date" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label required">Useful life (Yrs)</label>
+                                <input type="number" step="0.1" class="form-control" id="useful_life_yrs" required>
+                                <small class="text-muted">Expected useful life in years</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">DISPOSAL Date</label>
+                                <input type="date" class="form-control" id="disposal_date">
+                                <small class="text-muted">Leave empty if asset is active</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label required">INITIAL COST</label>
+                                <input type="number" step="0.01" class="form-control" id="initial_cost" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">OTHER COST</label>
+                                <input type="number" step="0.01" class="form-control" id="other_cost" value="0">
+                                <small class="text-muted">Shipping, installation, etc.</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label required">Entity</label>
+                                <input type="text" class="form-control" id="entity" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label required">Currency</label>
+                                <select class="form-control" id="currency" required>
+                                    <option value="USD">💵 USD - US Dollar</option>
+                                    <option value="EUR">💶 EUR - Euro</option>
+                                    <option value="GBP">💷 GBP - British Pound</option>
+                                    <option value="JPY">💴 JPY - Japanese Yen</option>
+                                    <option value="CAD">🇨🇦 CAD - Canadian Dollar</option>
+                                    <option value="AUD">🇦🇺 AUD - Australian Dollar</option>
+                                    <option value="GHS">🇬🇭 GHS - Ghana Cedi</option>
+                                </select>
+                            </div>
+                        </div>
+                        <input type="hidden" id="asset_id">
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="saveAsset()">
+                        <i class="fas fa-save"></i> Save Asset
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div class="modal fade" id="importModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-file-import"></i> Import Assets from Excel
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Please use the template downloaded from the "Download Template" button.
+                        <br>Make sure your file has the sheet name "Asset Template".
+                    </div>
+                    <input type="file" class="form-control" id="importFile" accept=".xlsx, .xls">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="uploadFile()">
+                        <i class="fas fa-upload"></i> Upload & Import
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        let dataTable;
+        let allAssets = [];
+        let selectedAssets = new Set();
+
+        function formatNumber(num) {
+            return num.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        // Toggle menu groups
+        function toggleMenuGroup(groupId) {
+            const group = document.getElementById(groupId);
+            const arrow = event.currentTarget.querySelector('.menu-arrow i');
+
+            if (group.classList.contains('collapsed')) {
+                group.classList.remove('collapsed');
+                arrow.classList.remove('fa-chevron-up');
+                arrow.classList.add('fa-chevron-down');
+            } else {
+                group.classList.add('collapsed');
+                arrow.classList.remove('fa-chevron-down');
+                arrow.classList.add('fa-chevron-up');
+            }
+        }
+
+        // Initialize menu groups
+        function initMenuGroups() {
+            const dataEntryGroup = document.getElementById('dataEntryGroup');
+            const reportsGroup = document.getElementById('reportsGroup');
+
+            if (dataEntryGroup) {
+                dataEntryGroup.classList.remove('collapsed');
+            }
+            if (reportsGroup) {
+                reportsGroup.classList.remove('collapsed');
+            }
+        }
+
+        // Navigation Functions
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            const toggleBtn = document.querySelector('.toggle-sidebar');
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('expanded');
+            toggleBtn.classList.toggle('collapsed');
+        }
+
+        function navigateTo(view) {
+            document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+            if (event && event.target) {
+                event.target.closest('.menu-item').classList.add('active');
+            }
+
+            document.getElementById('dashboardView').style.display = 'none';
+            document.getElementById('assetsView').style.display = 'none';
+            document.getElementById('categoriesView').style.display = 'none';
+
+            if (view === 'dashboard') {
+                document.getElementById('dashboardView').style.display = 'block';
+                loadDashboardData();
+            } else if (view === 'assets') {
+                document.getElementById('assetsView').style.display = 'block';
+                loadAssets();
+            } else if (view === 'categories') {
+                document.getElementById('categoriesView').style.display = 'block';
+                loadCategories();
+            } else if (view === 'depreciation') {
+                window.location.href = '/depreciation/schedule';
+            } else if (view === 'categorySummary') {
+                window.location.href = '/depreciation/category-summary';
+            } else if (view === 'assetSchedule') {
+                window.location.href = '/reports/asset-movement';
+            }  else if (view === 'help') {
+                Swal.fire({
+                    title: 'Help & Support',
+                    html: `
+                        <div style="text-align: left;">
+                            <h6><i class="fas fa-database"></i> Data Entry:</h6>
+                            <ul>
+                                <li><strong>All Assets:</strong> Add, edit, delete, import/export assets</li>
+                                <li><strong>Categories:</strong> Create and manage asset categories</li>
+                            </ul>
+                            <h6><i class="fas fa-chart-line"></i> Reports:</h6>
+                            <ul>
+                                <li><strong>Depreciation Schedule:</strong> Full depreciation breakdown by asset</li>
+                                <li><strong>Category Depreciation:</strong> Depreciation summary grouped by category</li>
+                                <li><strong>Asset Schedule:</strong> Fixed asset movement report (Cost, Depreciation, NBV)</li>
+                                
+                            </ul>
+                            <h6>Tips:</h6>
+                            <ul>
+                                <li>Use the search box to filter assets</li>
+                                <li>Click column headers to sort</li>
+                                <li>Use checkboxes for bulk delete operations</li>
+                            </ul>
+                        </div>
+                    `,
+                    icon: 'info',
+                    confirmButtonText: 'Got it!'
+                });
+            }
+        }
+
+        // Category Functions
+        function loadCategoriesDropdown() {
+            $.get('/api/categories', function(response) {
+                const categorySelect = $('#asset_category');
+                categorySelect.empty();
+                categorySelect.append('<option value="">Select Category</option>');
+                if (response.categories) {
+                    response.categories.forEach(category => {
+                        if (category !== 'Uncategorized') {
+                            categorySelect.append(`<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`);
+                        }
+                    });
+                }
+            });
+        }
+
+        function loadCategories() {
+            $('#categoriesList').html('<div class="text-center text-muted">Loading categories...</div>');
+
+            $.get('/api/categories/all', function(response) {
+                const categories = response.categories || [];
+
+                $.get('/api/assets', function(assets) {
+                    const assetCounts = {};
+                    assets.forEach(asset => {
+                        const cat = asset.asset_category || 'Uncategorized';
+                        assetCounts[cat] = (assetCounts[cat] || 0) + 1;
+                    });
+
+                    const categoriesList = $('#categoriesList');
+                    categoriesList.empty();
+
+                    if (categories.length === 0) {
+                        categoriesList.html('<div class="text-center text-muted">No categories yet. Create your first category above!</div>');
+                    } else {
+                        categories.forEach(cat => {
+                            const count = assetCounts[cat.name] || 0;
+                            const categoryHtml = `
+                                <div class="category-item">
+                                    <div>
+                                        <span class="category-name"><i class="fas fa-tag"></i> ${escapeHtml(cat.name)}</span>
+                                        <div class="category-count">${count} assets</div>
+                                        <small class="text-muted">Created: ${cat.created_date || 'N/A'}</small>
+                                    </div>
+                                    <div>
+                                        <button class="btn btn-sm btn-info" onclick="filterByCategory('${escapeHtml(cat.name).replace(/'/g, "\\'")}')">
+                                            <i class="fas fa-eye"></i> View Assets
+                                        </button>
+                                        ${cat.name !== 'Uncategorized' ? `<button class="btn btn-sm btn-danger" onclick="deleteCategory('${escapeHtml(cat.name).replace(/'/g, "\\'")}')">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </button>` : ''}
+                                    </div>
+                                </div>
+                            `;
+                            categoriesList.append(categoryHtml);
+                        });
+                    }
+
+                    const categoryStats = $('#categoryStats');
+                    categoryStats.empty();
+
+                    const topCategories = categories.slice(0, 4);
+                    topCategories.forEach(cat => {
+                        const count = assetCounts[cat.name] || 0;
+                        const percentage = assets.length > 0 ? (count / assets.length * 100).toFixed(1) : 0;
+                        categoryStats.append(`
+                            <div class="col-md-3">
+                                <div class="stats-card" style="background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%); color: #667eea;">
+                                    <h6>${escapeHtml(cat.name)}</h6>
+                                    <h4>${count}</h4>
+                                    <small>Assets (${percentage}%)</small>
+                                </div>
+                            </div>
+                        `);
+                    });
+                });
+            }).fail(function() {
+                $('#categoriesList').html('<div class="text-center text-danger">Error loading categories. Please check if the server is running.</div>');
+            });
+        }
+
+        function createCategory() {
+            const categoryName = $('#newCategoryName').val().trim();
+            if (!categoryName) {
+                Swal.fire('Error', 'Please enter a category name', 'error');
+                return;
+            }
+
+            $.ajax({
+                url: '/api/categories',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ category: categoryName }),
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire('Success', `Category "${categoryName}" has been created!`, 'success');
+                        $('#newCategoryName').val('');
+                        loadCategories();
+                        loadCategoriesDropdown();
+                    } else {
+                        Swal.fire('Error', response.error || 'Failed to create category', 'error');
+                    }
+                },
+                error: function(xhr) {
+                    Swal.fire('Error', xhr.responseJSON?.error || 'Failed to create category', 'error');
+                }
+            });
+        }
+
+        function deleteCategory(category) {
+            Swal.fire({
+                title: 'Delete Category',
+                text: `Are you sure you want to delete "${category}"? Assets with this category will be moved to "Uncategorized".`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: `/api/categories/${encodeURIComponent(category)}`,
+                        method: 'DELETE',
+                        success: function(response) {
+                            if (response.success) {
+                                Swal.fire('Deleted!', response.message, 'success');
+                                loadCategories();
+                                loadCategoriesDropdown();
+                                if (document.getElementById('assetsView').style.display !== 'none') {
+                                    loadAssets();
+                                } else {
+                                    loadDashboardData();
+                                }
+                            }
+                        },
+                        error: function(xhr) {
+                            Swal.fire('Error', xhr.responseJSON?.error || 'Failed to delete category', 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        function filterByCategory(category) {
+            navigateTo('assets');
+            setTimeout(() => {
+                $('#searchInput').val(category).trigger('keyup');
+                Swal.fire('Filter Applied', `Showing assets in category: ${category}`, 'info');
+            }, 500);
+        }
+
+        // Asset Functions
+        function loadDashboardData() {
+            $.get('/api/assets', function(assets) {
+                const total = assets.length;
+                const totalValue = assets.reduce((sum, a) => sum + a.initial_cost + a.other_cost, 0);
+                const active = assets.filter(a => !a.disposal_date).length;
+                const disposed = assets.filter(a => a.disposal_date).length;
+                $('#totalAssets').text(total);
+                $('#totalValue').text('$' + totalValue.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}));
+                $('#activeAssets').text(active);
+                $('#disposedAssets').text(disposed);
+            });
+        }
+
+        function loadAssets() {
+            $.get('/api/assets', function(assets) {
+                allAssets = assets;
+                selectedAssets.clear();
+                updateBulkActionsBar();
+
+                if (dataTable) dataTable.clear().destroy();
+
+                const tbody = $('#assetsTable tbody');
+                tbody.empty();
+
+                let totalInitial = 0, totalOther = 0, totalOverall = 0;
+
+                assets.forEach(asset => {
+                    const totalCost = asset.initial_cost + asset.other_cost;
+                    totalInitial += asset.initial_cost;
+                    totalOther += asset.other_cost;
+                    totalOverall += totalCost;
+                    const status = asset.disposal_date ? 'Disposed' : 'Active';
+                    const statusClass = asset.disposal_date ? 'status-disposed' : 'status-active';
+
+                    const row = `<tr>
+                        <td class="text-center"><input type="checkbox" class="asset-checkbox" data-id="${asset.id}" onchange="toggleAssetSelection(${asset.id})"></td>
+                        <td><strong>${escapeHtml(asset.asset_no)}</strong></td>
+                        <td><span class="category-badge">${escapeHtml(asset.asset_category || 'Uncategorized')}</span></td>
+                        <td>${escapeHtml(asset.description)}</td>
+                        <td>${escapeHtml(asset.user)}</td>
+                        <td>${escapeHtml(asset.serial_no || '-')}</td>
+                        <td>${escapeHtml(asset.condition)}</td>
+                        <td>${asset.purchase_date}</td>
+                        <td>${asset.depreciation_start_date}</td>
+                        <td>${asset.useful_life_yrs}</td>
+                        <td>${asset.disposal_date || '-'}</td>
+                        <td><span class="status-badge ${statusClass}">${status}</span></td>
+                        <td class="currency-value">${asset.currency} ${formatNumber(asset.initial_cost)}</td>
+                        <td class="currency-value">${asset.currency} ${formatNumber(asset.other_cost)}</td>
+                        <td class="currency-value"><strong>${asset.currency} ${formatNumber(totalCost)}</strong></td>
+                        <td>${escapeHtml(asset.entity)}</td>
+                        <td>${asset.currency}</td>
+                        <td>
+                            <button class="btn btn-sm btn-info btn-action" onclick="viewAsset(${asset.id})" title="View"><i class="fas fa-eye"></i></button>
+                            <button class="btn btn-sm btn-warning btn-action" onclick="editAsset(${asset.id})" title="Edit"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-danger btn-action" onclick="deleteAsset(${asset.id})" title="Delete"><i class="fas fa-trash"></i></button>
+                            <button class="btn btn-sm btn-secondary btn-action" onclick="viewDepreciation(${asset.id})" title="Depreciation"><i class="fas fa-chart-line"></i></button>
+                        </td>
+                    </tr>`;
+                    tbody.append(row);
+                });
+
+                $('#totalInitialCost').html(formatNumber(totalInitial));
+                $('#totalOtherCost').html(formatNumber(totalOther));
+                $('#totalOverallCost').html('<strong>' + formatNumber(totalOverall) + '</strong>');
+
+                dataTable = $('#assetsTable').DataTable({
+                    pageLength: 25,
+                    responsive: true,
+                    order: [[1, 'asc']],
+                    language: { search: "Search:", lengthMenu: "Show _MENU_ entries", info: "Showing _START_ to _END_ of _TOTAL_ assets" },
+                    drawCallback: function() {
+                        $('.asset-checkbox').each(function() {
+                            const id = parseInt($(this).data('id'));
+                            if (selectedAssets.has(id)) $(this).prop('checked', true);
+                        });
+                        updateSelectAllCheckbox();
+                    }
+                });
+                $('#searchInput').off('keyup').on('keyup', function() { if (dataTable) dataTable.search(this.value).draw(); });
+            });
+        }
+
+        // Bulk Delete Functions
+        function toggleAssetSelection(id) {
+            if (selectedAssets.has(id)) selectedAssets.delete(id);
+            else selectedAssets.add(id);
+            updateBulkActionsBar();
+            updateSelectAllCheckbox();
+        }
+
+        function toggleSelectAll() {
+            if ($('#selectAllCheckbox').prop('checked')) selectAll();
+            else deselectAll();
+        }
+
+        function selectAll() {
+            $('.asset-checkbox:visible').each(function() {
+                const id = parseInt($(this).data('id'));
+                selectedAssets.add(id);
+                $(this).prop('checked', true);
+            });
+            updateBulkActionsBar();
+            updateSelectAllCheckbox();
+        }
+
+        function deselectAll() {
+            selectedAssets.clear();
+            $('.asset-checkbox').prop('checked', false);
+            updateBulkActionsBar();
+            updateSelectAllCheckbox();
+        }
+
+        function updateSelectAllCheckbox() {
+            const totalVisible = $('.asset-checkbox:visible').length;
+            const selectedVisible = $('.asset-checkbox:visible').filter(function() {
+                return selectedAssets.has(parseInt($(this).data('id')));
+            }).length;
+            if (totalVisible > 0 && selectedVisible === totalVisible) {
+                $('#selectAllCheckbox').prop('checked', true).prop('indeterminate', false);
+            } else if (selectedVisible > 0) {
+                $('#selectAllCheckbox').prop('checked', false).prop('indeterminate', true);
+            } else {
+                $('#selectAllCheckbox').prop('checked', false).prop('indeterminate', false);
+            }
+        }
+
+        function updateBulkActionsBar() {
+            const count = selectedAssets.size;
+            if (count > 0) {
+                $('#bulkActionsBar').show();
+                $('#bulkDeleteBtn').show();
+                $('#selectedCount').text(count);
+            } else {
+                $('#bulkActionsBar').hide();
+                $('#bulkDeleteBtn').hide();
+            }
+        }
+
+        function bulkDelete() {
+            const count = selectedAssets.size;
+            if (count === 0) {
+                Swal.fire('Warning', 'No assets selected for deletion', 'warning');
+                return;
+            }
+            Swal.fire({
+                title: 'Bulk Delete Confirmation',
+                html: `Are you sure you want to delete <strong>${count}</strong> asset(s)?<br><br>This action cannot be undone!`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: `Yes, delete ${count} asset(s)!`
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const assetIds = Array.from(selectedAssets);
+                    Swal.fire({ title: 'Deleting...', text: `Please wait...`, allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                    Promise.all(assetIds.map(id => $.ajax({ url: `/api/assets/${id}`, method: 'DELETE' })))
+                        .then(() => { Swal.fire('Success!', `${count} asset(s) have been deleted.`, 'success'); selectedAssets.clear(); loadAssets(); loadCategories(); })
+                        .catch(() => Swal.fire('Error!', 'Some assets could not be deleted.', 'error'));
+                }
+            });
+        }
+
+        // CRUD Functions
+        function refreshData() { loadAssets(); loadDashboardData(); Swal.fire('Refreshed', 'Data has been refreshed', 'success'); }
+        function showAddModal() { $('#modalTitle').html('<i class="fas fa-plus-circle"></i> Add Asset'); $('#assetForm')[0].reset(); $('#asset_id').val(''); $('#disposal_date').val(''); loadCategoriesDropdown(); $('#assetModal').modal('show'); }
+
+        function viewAsset(id) {
+            const asset = allAssets.find(a => a.id === id);
+            if (asset) {
+                const totalCost = asset.initial_cost + asset.other_cost;
+                Swal.fire({
+                    title: `Asset: ${asset.asset_no}`,
+                    html: `<div style="text-align: left;"><p><strong>Category:</strong> ${escapeHtml(asset.asset_category || 'Uncategorized')}</p><p><strong>Description:</strong> ${escapeHtml(asset.description)}</p><p><strong>User:</strong> ${escapeHtml(asset.user)}</p><p><strong>Serial No:</strong> ${escapeHtml(asset.serial_no || 'N/A')}</p><p><strong>Condition:</strong> ${escapeHtml(asset.condition)}</p><p><strong>Purchase Date:</strong> ${asset.purchase_date}</p><p><strong>Depreciation Start:</strong> ${asset.depreciation_start_date}</p><p><strong>Useful Life:</strong> ${asset.useful_life_yrs} years</p><p><strong>Disposal Date:</strong> ${asset.disposal_date || 'Active'}</p><p><strong>Initial Cost:</strong> ${asset.currency} ${formatNumber(asset.initial_cost)}</p><p><strong>Other Cost:</strong> ${asset.currency} ${formatNumber(asset.other_cost)}</p><p><strong>Total Cost:</strong> ${asset.currency} ${formatNumber(totalCost)}</p><p><strong>Entity:</strong> ${escapeHtml(asset.entity)}</p></div>`,
+                    icon: 'info',
+                    confirmButtonText: 'Close'
+                });
+            }
+        }
+
+        function editAsset(id) {
+            const asset = allAssets.find(a => a.id === id);
+            if (asset) {
+                $('#modalTitle').html('<i class="fas fa-edit"></i> Edit Asset');
+                $('#asset_id').val(asset.id);
+                $('#asset_no').val(asset.asset_no);
+                $('#description').val(asset.description);
+                $('#user').val(asset.user);
+                $('#serial_no').val(asset.serial_no);
+                $('#condition').val(asset.condition);
+                $('#purchase_date').val(asset.purchase_date);
+                $('#depreciation_start_date').val(asset.depreciation_start_date);
+                $('#useful_life_yrs').val(asset.useful_life_yrs);
+                $('#disposal_date').val(asset.disposal_date);
+                $('#initial_cost').val(asset.initial_cost);
+                $('#other_cost').val(asset.other_cost);
+                $('#entity').val(asset.entity);
+                $('#currency').val(asset.currency);
+                loadCategoriesDropdown();
+                setTimeout(() => { $('#asset_category').val(asset.asset_category); }, 100);
+                $('#assetModal').modal('show');
+            }
+        }
+
+        function viewDepreciation(id) { window.location.href = `/depreciation/schedule/${id}`; }
+
+        function saveAsset() {
+            const assetData = {
+                asset_no: $('#asset_no').val(),
+                asset_category: $('#asset_category').val(),
+                description: $('#description').val(),
+                user: $('#user').val(),
+                serial_no: $('#serial_no').val(),
+                condition: $('#condition').val(),
+                purchase_date: $('#purchase_date').val(),
+                depreciation_start_date: $('#depreciation_start_date').val(),
+                useful_life_yrs: $('#useful_life_yrs').val(),
+                disposal_date: $('#disposal_date').val(),
+                initial_cost: $('#initial_cost').val(),
+                other_cost: $('#other_cost').val(),
+                entity: $('#entity').val(),
+                currency: $('#currency').val()
+            };
+            const id = $('#asset_id').val();
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `/api/assets/${id}` : '/api/assets';
+            $.ajax({
+                url: url, method: method, contentType: 'application/json', data: JSON.stringify(assetData),
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire('Success', 'Asset saved successfully!', 'success');
+                        $('#assetModal').modal('hide');
+                        loadAssets();
+                        loadCategories();
+                    }
+                },
+                error: function(xhr) { Swal.fire('Error', xhr.responseJSON?.error || 'An error occurred', 'error'); }
+            });
+        }
+
+        function deleteAsset(id) {
+            Swal.fire({
+                title: 'Are you sure?', text: "You won't be able to revert this!", icon: 'warning',
+                showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#3085d6', confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: `/api/assets/${id}`, method: 'DELETE',
+                        success: function(response) {
+                            if (response.success) {
+                                Swal.fire('Deleted!', 'Asset has been deleted.', 'success');
+                                selectedAssets.delete(id);
+                                loadAssets();
+                                loadCategories();
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        function exportExcel() { window.location.href = '/export/excel'; }
+        function downloadTemplate() { window.location.href = '/download/template'; }
+        function importExcel() { $('#importModal').modal('show'); }
+
+        function uploadFile() {
+            const file = $('#importFile')[0].files[0];
+            if (!file) { Swal.fire('Error', 'Please select a file', 'error'); return; }
+            const formData = new FormData();
+            formData.append('file', file);
+            Swal.fire({ title: 'Importing...', text: 'Please wait...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            $.ajax({
+                url: '/import/excel', method: 'POST', data: formData, processData: false, contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire('Success', response.message, 'success');
+                        $('#importModal').modal('hide');
+                        loadAssets();
+                        loadCategories();
+                        loadCategoriesDropdown();
+                    } else {
+                        Swal.fire('Error', response.error, 'error');
+                    }
+                },
+                error: function(xhr) { Swal.fire('Error', xhr.responseJSON?.error || 'Import failed', 'error'); }
+            });
+        }
+
+        $(document).ready(function() {
+            initMenuGroups();
+            loadDashboardData();
+            loadAssets();
+        });
+    </script>
+</body>
+</html>
