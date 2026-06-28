@@ -1,10 +1,10 @@
 from flask import Flask, render_template, request, send_file, jsonify, session, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 from datetime import datetime
 import pandas as pd
 import os
 from io import BytesIO
-from flask_migrate import Migrate
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
@@ -28,8 +28,9 @@ def ensure_database_schema():
         if 'companies' in inspector.get_table_names():
             columns = [c['name'] for c in inspector.get_columns('companies')]
 
-            # Define required columns with their definitions
+            # Define ALL required columns with their definitions
             required_columns = {
+                'base_currency': "VARCHAR(3) NOT NULL DEFAULT 'USD'",
                 'code': "VARCHAR(20) NOT NULL DEFAULT 'DEFAULT'",
                 'address': "VARCHAR(200)",
                 'phone': "VARCHAR(50)",
@@ -42,30 +43,29 @@ def ensure_database_schema():
             if missing:
                 print(f"Adding missing columns: {missing}")
                 with db.engine.connect() as conn:
+                    # Begin transaction
+                    conn.execute(db.text('BEGIN'))
+
+                    # Add each missing column
                     for col, col_def in required_columns.items():
                         if col not in columns:
                             conn.execute(db.text(f'ALTER TABLE companies ADD COLUMN {col} {col_def}'))
 
-                    # Ensure code column has a unique constraint
+                    # Add unique constraint for code if it was missing
                     if 'code' in missing:
-                        # Check if constraint exists
                         constraints = inspector.get_unique_constraints('companies')
                         if not any(c.get('column_names', []) == ['code'] for c in constraints):
                             conn.execute(
                                 db.text('ALTER TABLE companies ADD CONSTRAINT companies_code_key UNIQUE (code)'))
 
-                    conn.commit()
-                print("✓ Database schema updated")
+                    conn.execute(db.text('COMMIT'))
+                print("✓ Database schema updated successfully")
+
     except Exception as e:
         print(f"⚠️ Schema update warning: {e}")
 
 
-# Call this after db.create_all()
-with app.app_context():
-    db.create_all()
-    ensure_database_schema()
-
-
+# ===== MODELS =====
 class Company(db.Model):
     __tablename__ = 'companies'
     id = db.Column(db.Integer, primary_key=True)
@@ -275,11 +275,22 @@ class AssetReturnForm(db.Model):
 
 
 def get_current_company():
+    """Get the current company from session or app config"""
+    # First check if there's a company_id in the session (for logged-in users)
     company_id = session.get('current_company_id')
     if company_id:
         company = Company.query.get(company_id)
         if company:
             return company
+
+    # Fall back to the app config default
+    company_id = app.config.get('CURRENT_COMPANY_ID')
+    if company_id:
+        company = Company.query.get(company_id)
+        if company:
+            return company
+
+    # Last resort: get the default company from the database
     default = Company.query.filter_by(code='DEFAULT').first()
     if default:
         session['current_company_id'] = default.id
@@ -287,10 +298,17 @@ def get_current_company():
     return None
 
 
+# ===== DATABASE INITIALIZATION =====
 with app.app_context():
+    print("Creating database tables...")
     db.create_all()
-    print("✓ Database tables created")
+    print("✓ Tables created")
 
+    print("Ensuring schema is up to date...")
+    ensure_database_schema()
+
+    # Create or update default company
+    print("Setting up default company...")
     default_company = Company.query.filter_by(code='DEFAULT').first()
     if not default_company:
         default_company = Company(
@@ -298,12 +316,31 @@ with app.app_context():
             code='DEFAULT',
             base_currency='USD',
             created_date=datetime.now().date(),
-            is_active=True
+            is_active=True,
+            address='',
+            phone='',
+            email='',
+            tax_id=''
         )
         db.session.add(default_company)
         db.session.commit()
         print("✓ Added default company")
+    else:
+        # Ensure existing company has all fields populated
+        if not default_company.base_currency:
+            default_company.base_currency = 'USD'
+        if not default_company.address:
+            default_company.address = ''
+        if not default_company.phone:
+            default_company.phone = ''
+        if not default_company.email:
+            default_company.email = ''
+        if not default_company.tax_id:
+            default_company.tax_id = ''
+        db.session.commit()
+        print("✓ Default company updated")
 
+    # Create admin user
     admin_user = User.query.filter_by(full_name='System Administrator', company_id=default_company.id).first()
     if not admin_user:
         admin_user = User(
@@ -318,7 +355,12 @@ with app.app_context():
         db.session.commit()
         print("✓ Created admin user")
 
+    # Store the default company ID in app config for use outside request context
+    app.config['CURRENT_COMPANY_ID'] = default_company.id
+    print(f"✓ Default company set: {default_company.name}")
 
+
+# ===== ROUTES =====
 @app.route('/')
 def index():
     company = get_current_company()
@@ -844,6 +886,7 @@ def create_assignment():
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 400
+
 
 @app.route('/api/assignments/<int:assignment_id>/return', methods=['POST'])
 def return_asset(assignment_id):
@@ -1828,7 +1871,7 @@ def user_asset_report():
         }
 
         user_assets.append({
-            'user': user_dict,  # <-- Use dict instead of User object
+            'user': user_dict,
             'assets': asset_list,
             'total_assets': len(assets),
             'total_value': sum(a.initial_cost + a.other_cost for a in assets),
@@ -1987,6 +2030,7 @@ def api_user_asset_report():
         'generated_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     })
 
+
 @app.route('/reports/user-assets/export/pdf')
 def export_user_asset_pdf():
     """Export user asset report to PDF"""
@@ -2036,8 +2080,8 @@ def export_user_asset_pdf():
                            company=company,
                            generated_date=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                            user_id=user_id,
-                           total_all_assets=total_all_assets,  # <-- Add this
-                           total_all_value=total_all_value)  # <-- Add this
+                           total_all_assets=total_all_assets,
+                           total_all_value=total_all_value)
 
     return html
 
@@ -2258,6 +2302,7 @@ def delete_assignment(assignment_id):
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 400
 
+
 @app.route('/reports/asset-history/export/pdf')
 def export_asset_history_pdf():
     """Export Asset History report to PDF"""
@@ -2294,9 +2339,8 @@ def export_asset_history_pdf():
                            company=company,
                            generated_date=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
-    # For now, return the HTML with print styles
-    # To generate actual PDF, you would use pdfkit or weasyprint
     return html
+
 
 if __name__ == '__main__':
     print("=" * 60)
