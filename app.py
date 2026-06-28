@@ -20,6 +20,52 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 
+def ensure_database_schema():
+    """Auto-add missing columns to companies table"""
+    try:
+        inspector = db.inspect(db.engine)
+
+        if 'companies' in inspector.get_table_names():
+            columns = [c['name'] for c in inspector.get_columns('companies')]
+
+            # Define required columns with their definitions
+            required_columns = {
+                'code': "VARCHAR(20) NOT NULL DEFAULT 'DEFAULT'",
+                'address': "VARCHAR(200)",
+                'phone': "VARCHAR(50)",
+                'email': "VARCHAR(100)",
+                'tax_id': "VARCHAR(50)"
+            }
+
+            missing = [col for col in required_columns if col not in columns]
+
+            if missing:
+                print(f"Adding missing columns: {missing}")
+                with db.engine.connect() as conn:
+                    for col, col_def in required_columns.items():
+                        if col not in columns:
+                            conn.execute(db.text(f'ALTER TABLE companies ADD COLUMN {col} {col_def}'))
+
+                    # Ensure code column has a unique constraint
+                    if 'code' in missing:
+                        # Check if constraint exists
+                        constraints = inspector.get_unique_constraints('companies')
+                        if not any(c.get('column_names', []) == ['code'] for c in constraints):
+                            conn.execute(
+                                db.text('ALTER TABLE companies ADD CONSTRAINT companies_code_key UNIQUE (code)'))
+
+                    conn.commit()
+                print("✓ Database schema updated")
+    except Exception as e:
+        print(f"⚠️ Schema update warning: {e}")
+
+
+# Call this after db.create_all()
+with app.app_context():
+    db.create_all()
+    ensure_database_schema()
+
+
 class Company(db.Model):
     __tablename__ = 'companies'
     id = db.Column(db.Integer, primary_key=True)
